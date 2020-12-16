@@ -1,17 +1,54 @@
 # Exoma de Rattus norvegicus
+
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
-# Requisitos
+
+
+### Requisitos
 
 * docker
 * wget
 * sratools
 
-# Projeto e Amostras Utilizadas (SRA)
+## Workflow
+
+[TOC]
+
+### Projeto e Amostras Utilizadas (SRA)
 
 Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferring (NP) rats (Norway rat). ExomeSeq of selectively bred alcohol-preferring (P) and nonpreferring (NP) rats.
 
 * https://www.ncbi.nlm.nih.gov/bioproject/PRJNA262169
+
+
+
+| Accession    | PRJNA262169                                                  |
+| ------------ | ------------------------------------------------------------ |
+| Data Type    | Exome                                                        |
+| Scope        | Multiisolate                                                 |
+| Organism     | [Rattus norvegicus](https://www.ncbi.nlm.nih.gov/taxonomy/10116)[Taxonomy ID: 10116]Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia; Eutheria; Euarchontoglires; Glires; Rodentia; Myomorpha; Muroidea; Muridae; Murinae; Rattus; Rattus norvegicus |
+| Publications | [Zhou Z *et al.,*](https://www.ncbi.nlm.nih.gov/pubmed/24082084) "Loss of metabotropic glutamate receptor 2 escalates alcohol consumption.", *Proc Natl Acad Sci U S A*, 2013 Oct 15;110(42):16963-8 |
+| Submission   | Registration date: 26-Sep-2014 **NIH/NIAAA**                 |
+| Relevance    | Medical                                                      |
+
+
+
+### Classificação
+
+| ID           | Group                                   | Name |
+| ------------ | --------------------------------------- | ---- |
+| SRR1594108.2 | Selectively bred alcohol-preferring (P) | P4   |
+| SRR1594109.2 | Selectively bred alcohol-preferring (P) | P5   |
+| SRR1594110.2 | Selectively bred alcohol-preferring (P) | P7   |
+| SRR1594111.2 | Selectively bred alcohol-preferring (P) | P8   |
+| SRR1594112.2 | nonpreferring (NP)                      | NP2  |
+| SRR1594113.2 | nonpreferring (NP)                      | NP4  |
+| SRR1594114.2 | nonpreferring (NP)                      | NP5  |
+| SRR1594115.2 | nonpreferring (NP)                      | NP6  |
+| SRR1594116.2 | nonpreferring (NP)                      | NP7  |
+| SRR1594117.2 | nonpreferring (NP)                      | NP8  |
+
+
 
 # Genome
 
@@ -84,21 +121,6 @@ sh getRun.sh srafile.txt
 
 
 
-| ID           | Group                                   | Name |
-| ------------ | --------------------------------------- | ---- |
-| SRR1594108.2 | Selectively bred alcohol-preferring (P) | P4   |
-| SRR1594109.2 | Selectively bred alcohol-preferring (P) | P5   |
-| SRR1594110.2 | Selectively bred alcohol-preferring (P) | P7   |
-| SRR1594111.2 | Selectively bred alcohol-preferring (P) | P8   |
-| SRR1594112.2 | nonpreferring (NP)                      | NP2  |
-| SRR1594113.2 | nonpreferring (NP)                      | NP4  |
-| SRR1594114.2 | nonpreferring (NP)                      | NP5  |
-| SRR1594115.2 | nonpreferring (NP)                      | NP6  |
-| SRR1594116.2 | nonpreferring (NP)                      | NP7  |
-| SRR1594117.2 | nonpreferring (NP)                      | NP8  |
-
-
-
 ### Pipeline `pipe.sh`
 
 ```bash
@@ -144,6 +166,4 @@ rm -f output/$sample.sorted.dup.bam
 rm -f output/$sample.sorted.dup.bai
 rm -f output/$sample.sorted.bam
 ```
-
-
 
