@@ -33,6 +33,7 @@ SRR1594116/SRR1594116.2
 SRR1594117/SRR1594117.2
 ```
 
+# Pipeline
 
 
 ### Script getRun.sh
