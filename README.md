@@ -7,9 +7,19 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 ### Requisitos
 
 * docker
-* wget
-* sratools
 
+* wget
+
+* sratools (SRA Toolkit provides **64-bit** binary)
+
+  | OS           | are available here                                           |
+  | ------------ | ------------------------------------------------------------ |
+  | **Windows**  | [sratoolkit.current-win64.zip] (http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-win64.zip) |
+  | **Ubuntu**   | [sratoolkit.current-ubuntu64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz) |
+  | **CentOS**   | [sratoolkit.current-centos_linux64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-centos_linux64.tar.gz) |
+  | **Mac OS X** | [sratoolkit.current-mac64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-mac64.tar.gz) |
+
+  
 
 ### Projeto e Amostras Utilizadas (SRA)
 
