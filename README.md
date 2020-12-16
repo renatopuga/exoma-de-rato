@@ -10,9 +10,6 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 * wget
 * sratools
 
-## Workflow
-
-[TOC]
 
 ### Projeto e Amostras Utilizadas (SRA)
 
