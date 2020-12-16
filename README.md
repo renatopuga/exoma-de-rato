@@ -7,7 +7,7 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 * wget
 * sratools
 
-### Amostras Utilizadas
+# Projeto e Amostras Utilizadas (SRA)
 
 Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferring (NP) rats (Norway rat). ExomeSeq of selectively bred alcohol-preferring (P) and nonpreferring (NP) rats.
 
@@ -24,6 +24,54 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 | Relevance    | Medical                                                      |
 
 
+# Pipeline
+
+
+```bash
+# references
+genome="/scratch/refs/rattus-nor6/Rattus_norvegicus_nor6.fa"
+dbsnp="/scratch/refs/rattus-nor6/00-All.vcf.gz"
+intervals="/scratch/refs/rattus-nor6/Rattus_norvegicus_nor6.interval_list"
+
+tmp="/data/tmp"
+
+sample=$1
+LB="WES"
+PL="illumina"
+PU="HiSeq"
+
+# listar o R1 de cada lanes
+listR1=$(ls -1 input/$sample/*_1*.fastq)
+# executar o bwa para cada lane
+for i in $listR1
+do
+	R1=$i
+	R2=$(echo $i | sed -e "s/_1/_2/g")
+
+	docker run --user "$(id -u):$(id -g)" -v /reference/:/reference -v $(pwd):/data/ comics/bwa bwa mem -t 5 -M -R '@RG\tID:'$sample'\tLB:'$LB'\tSM:'$sample'\tPL:'$PL'\tPU:'$PU'' $genome /data/$R1 /data/$R2 | samtools view -F4 -Sbu -@2 - | samtools sort -m4G -@2 -o output/$sample.sorted.bam
+done
+
+docker run -v /tmp:/tmp -v /reference:/reference -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Djava.io.tmpdir=${tmp}  -Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" MarkDuplicates \
+ --TMP_DIR $tmp \
+ -I /data/output/$sample.sorted.bam -O /data/output/$sample.sorted.dup.bam \
+ -M /data/output/$sample.sorted.dup_metrics \
+ --VALIDATION_STRINGENCY SILENT \
+ --CREATE_INDEX true \
+
+	#Rodando o conteiner de recalibrador de base para aumentar a qualidade liberando uma tabela com todos os pontos considerados
+	docker run --user "$(id -u):$(id -g)" -v /reference/:/reference -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" BaseRecalibrator -L $intervals -R $genome -I /data/output/$sample.sorted.dup.bam --known-sites $dbsnp -O /data/output/$sample.sorted.dup.recal.data.table
+
+	docker run --user "$(id -u):$(id -g)" -v /reference:/reference -v $(pwd):/data broadinstitute/gatk gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" ApplyBQSR -R $genome -I /data/output/$sample.sorted.dup.bam -bqsr /data/output/$sample.sorted.dup.recal.data.table -L $intervals --create-output-bam-index true --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 -O /data/output/$sample.sorted.dup.recal.bam
+
+
+rm -rf input/$sample*
+rm -f output/$sample.sorted.dup.recal.data.table
+rm -f output/$sample.sorted.dup.bam 
+rm -f output/$sample.sorted.dup.bai
+rm -f output/$sample.sorted.bam
+```
+
+
 ### srafile.txt
 
 ```bash
@@ -38,9 +86,6 @@ SRR1594115/SRR1594115.2
 SRR1594116/SRR1594116.2
 SRR1594117/SRR1594117.2
 ```
-
-# Pipeline
-
 
 ### Script getRun.sh
 
