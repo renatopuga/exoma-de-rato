@@ -29,13 +29,6 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 ### Script pipe.sh
 
 ```bash
-# references
-genome="/scratch/refs/rattus-nor6/Rattus_norvegicus_nor6.fa"
-dbsnp="/scratch/refs/rattus-nor6/00-All.vcf.gz"
-intervals="/scratch/refs/rattus-nor6/Rattus_norvegicus_nor6.interval_list"
-
-tmp="/data/tmp"
-
 sample=$1
 LB="WES"
 PL="illumina"
@@ -49,10 +42,12 @@ do
 	R1=$i
 	R2=$(echo $i | sed -e "s/_1/_2/g")
 
-	docker run --user "$(id -u):$(id -g)" -v /reference/:/reference -v $(pwd):/data/ comics/bwa bwa mem -t 5 -M -R '@RG\tID:'$sample'\tLB:'$LB'\tSM:'$sample'\tPL:'$PL'\tPU:'$PU'' $genome /data/$R1 /data/$R2 | samtools view -F4 -Sbu -@2 - | samtools sort -m4G -@2 -o output/$sample.sorted.bam
+	docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ comics/bwa bwa mem -t 5 -M -R '@RG\tID:'$sample'\tLB:'$LB'\tSM:'$sample'\tPL:'$PL'\tPU:'$PU'' $genome /data/$R1 /data/$R2 | samtools view -F4 -Sbu -@2 - | samtools sort -m4G -@2 -o output/$sample.sorted.bam
+
 done
 
-docker run -v /tmp:/tmp -v /reference:/reference -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Djava.io.tmpdir=${tmp}  -Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" MarkDuplicates \
+
+docker run -v /tmp:/tmp -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Djava.io.tmpdir=${tmp}  -Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" MarkDuplicates \
  --TMP_DIR $tmp \
  -I /data/output/$sample.sorted.bam -O /data/output/$sample.sorted.dup.bam \
  -M /data/output/$sample.sorted.dup_metrics \
@@ -60,16 +55,10 @@ docker run -v /tmp:/tmp -v /reference:/reference -v $(pwd):/data broadinstitute/
  --CREATE_INDEX true \
 
 	#Rodando o conteiner de recalibrador de base para aumentar a qualidade liberando uma tabela com todos os pontos considerados
-	docker run --user "$(id -u):$(id -g)" -v /reference/:/reference -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" BaseRecalibrator -L $intervals -R $genome -I /data/output/$sample.sorted.dup.bam --known-sites $dbsnp -O /data/output/$sample.sorted.dup.recal.data.table
+	docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" BaseRecalibrator -L $intervals -R $genome -I /data/output/$sample.sorted.dup.bam --known-sites $dbsnp -O /data/output/$sample.sorted.dup.recal.data.table
 
-	docker run --user "$(id -u):$(id -g)" -v /reference:/reference -v $(pwd):/data broadinstitute/gatk gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" ApplyBQSR -R $genome -I /data/output/$sample.sorted.dup.bam -bqsr /data/output/$sample.sorted.dup.recal.data.table -L $intervals --create-output-bam-index true --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 -O /data/output/$sample.sorted.dup.recal.bam
+	docker run --user "$(id -u):$(id -g)" -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" ApplyBQSR -R $genome -I /data/output/$sample.sorted.dup.bam -bqsr /data/output/$sample.sorted.dup.recal.data.table -L $intervals --create-output-bam-index true --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 -O /data/output/$sample.sorted.dup.recal.bam
 
-
-rm -rf input/$sample*
-rm -f output/$sample.sorted.dup.recal.data.table
-rm -f output/$sample.sorted.dup.bam 
-rm -f output/$sample.sorted.dup.bai
-rm -f output/$sample.sorted.bam
 ```
 
 
