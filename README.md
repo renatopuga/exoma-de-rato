@@ -1,6 +1,12 @@
 # Exoma de Rattus norvegicus
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
+# Requisitos
+
+* docker
+* wget
+* sratools
+
 ### Amostras Utilizadas
 
 Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferring (NP) rats (Norway rat). ExomeSeq of selectively bred alcohol-preferring (P) and nonpreferring (NP) rats.
