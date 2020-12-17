@@ -3,7 +3,7 @@
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
 
-### Requisitos
+# Requisitos
 
 * docker
 
@@ -37,7 +37,7 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
   | **Mac OS X** | [sratoolkit.current-mac64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-mac64.tar.gz) |
 
 
-### Projeto e Amostras Utilizadas (SRA)
+## Projeto e Amostras Utilizadas (SRA)
 
 Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferring (NP) rats (Norway rat). ExomeSeq of selectively bred alcohol-preferring (P) and nonpreferring (NP) rats.
 
@@ -56,7 +56,7 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 
 
 
-### Classificação
+## Classificação
 
 | ID           | Group                                   | Name |
 | ------------ | --------------------------------------- | ---- |
