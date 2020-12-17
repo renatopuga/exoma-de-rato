@@ -12,5 +12,5 @@ do
     rm -rf $(basename $srafile)
     mkdir input/$(basename $srafile)
     mv $(basename $srafile)*.fastq input/$(basename $srafile)
-    sh pipe.sh $(basename $srafile)
+    sh mapRun.sh $(basename $srafile)
 done
