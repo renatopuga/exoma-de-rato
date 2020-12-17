@@ -3,12 +3,29 @@
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
 
-
 ### Requisitos
 
 * docker
 
 * wget
+
+  * ```bash
+    # ubuntu
+    sudo apt-get install -y wget
+    
+    # mac
+    brew install wget
+    ```
+
+* samtools
+
+  * ```bash
+    # ubuntu
+    sudo apt-get install -y samtools
+    
+    # mac
+    brew install samtools
+    ```
 
 * sratools (SRA Toolkit provides **64-bit** binary)
 
@@ -19,7 +36,6 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
   | **CentOS**   | [sratoolkit.current-centos_linux64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-centos_linux64.tar.gz) |
   | **Mac OS X** | [sratoolkit.current-mac64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-mac64.tar.gz) |
 
-  
 
 ### Projeto e Amostras Utilizadas (SRA)
 
@@ -69,13 +85,99 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 
 
 
-### Genoma rn6 `Index`
+### Genoma nor6 `Index`, `dict`, `faidx`, `interval_list`e `BED`
 
 ```bash
+# entrar no dir de referencias
 cd /scratch/bucket
-wget -c https://hgdownload.soe.ucsc.edu/goldenPath/rn6/bigZips/rn6.fa.gz
-gunzip rn6.fa.gz
-docker run -v /scratch/:/scratch -v $(pwd):/data/ comics/bwa bwa index /data/rn6.fa 
+
+# download
+wget -c ftp://ftp.ensembl.org/pub/release-102/fasta/rattus_norvegicus/dna/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
+
+# descompactar
+gunzip Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
+# renomear
+mv Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa Rattus_norvegicus_nor6.fa 
+
+# faidx
+samtools fadix Rattus_norvegicus_nor6.fa 
+
+# BWA index
+docker run -v /scratch/:/scratch -v $(pwd):/data/ comics/bwa bwa index /data/Rattus_norvegicus_nor6.fa 
+
+# GATK dict
+docker run  -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk CreateSequenceDictionary \
+	-R /data/Rattus_norvegicus_nor6.fa \
+	-O /data/Rattus_norvegicus_nor6.dict
+	
+# GATK intereval_list (FASTA)
+docker run  -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk ScatterIntervalsByNs \
+      -R /data/Rattus_norvegicus_nor6.fa \
+      -O /data/Rattus_norvegicus_nor6.interval_list \
+      -OT ACGT
+
+# GATK intereval_list (BED)
+wget -c ftp://ftp.ensembl.org/pub/release-102/gff3/rattus_norvegicus/Rattus_norvegicus.Rnor_6.0.102.gff3.gz
+
+# separar regions e colunas interesse
+# ensembl, insdc e gene
+zgrep -v "\#" Rattus_norvegicus.Rnor_6.0.102.gff3.gz  | grep -w "ensembl\|insdc"| grep -w gene | grep  ^[0-9M] | cut -f1,4-7 | sort -Vu -k1,2 > Rnor_6.0.102.bed
+
+docker run  -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk BedToIntervalList \
+        -I /data/Rnor_6.0.102.bed  \
+        -O /data/Rnor_6.0.102.interval_list \
+        -SD /data/Rattus_norvegicus_nor6.dict
+```
+
+
+
+### Pipeline `mapRun.sh`
+
+```bash
+# scratch
+genome="/scratch/bucket/Rattus_norvegicus_nor6.fa"
+dbsnp="/scratch/bucket/00-All.vcf.gz"
+intervals="/scratch/bucket/Rattus_norvegicus_nor6.interval_list"
+
+tmp="/data/tmp"
+
+sample=$1
+LB="WES"
+PL="illumina"
+PU="HiSeq"
+
+# listar amostras
+listR1=$(ls -1 input/$sample/*_1*.fastq)
+
+# run bwa-mem 
+for i in $listR1
+do
+	R1=$i
+	R2=$(echo $i | sed -e "s/_1/_2/g")
+
+	docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ comics/bwa bwa mem -t 5 -M -R '@RG\tID:'$sample'\tLB:'$LB'\tSM:'$sample'\tPL:'$PL'\tPU:'$PU'' $genome /data/$R1 /data/$R2 | samtools view -F4 -Sbu -@2 - | samtools sort -m4G -@2 -o output/$sample.sorted.bam
+done
+
+# run MarkDuplicates
+docker run -v /tmp:/tmp -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Djava.io.tmpdir=${tmp}  -Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" MarkDuplicates \
+ --TMP_DIR $tmp \
+ -I /data/output/$sample.sorted.bam -O /data/output/$sample.sorted.dup.bam \
+ -M /data/output/$sample.sorted.dup_metrics \
+ --VALIDATION_STRINGENCY SILENT \
+ --CREATE_INDEX true \
+
+# run BaseRecalibrator
+docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" BaseRecalibrator -L $intervals -R $genome -I /data/output/$sample.sorted.dup.bam --known-sites $dbsnp -O /data/output/$sample.sorted.dup.recal.data.table
+
+# run ApplyBQSR
+docker run --user "$(id -u):$(id -g)" -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" ApplyBQSR -R $genome -I /data/output/$sample.sorted.dup.bam -bqsr /data/output/$sample.sorted.dup.recal.data.table -L $intervals --create-output-bam-index true --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 -O /data/output/$sample.sorted.dup.recal.bam
+
+# remove tmp files
+rm -rf input/$sample*
+rm -f output/$sample.sorted.dup.recal.data.table
+rm -f output/$sample.sorted.dup.bam 
+rm -f output/$sample.sorted.dup.bai
+rm -f output/$sample.sorted.bam
 ```
 
 
@@ -114,7 +216,7 @@ do
     rm -rf $(basename $srafile)
     mkdir input/$(basename $srafile)
     mv $(basename $srafile)*.fastq input/$(basename $srafile)
-    sh pipe.sh $(basename $srafile)
+    sh mapRun.sh $(basename $srafile)
 done
 ```
 
@@ -128,49 +230,63 @@ sh getRun.sh srafile.txt
 
 
 
-### Pipeline `pipe.sh`
+### Chamar Variantes `runCallVar.sh`
 
 ```bash
-# scratch
-genome="/scratch/bucket/rn6/rn6.fa"
-dbsnp="/scratch/bucket/rn6/00-All.vcf.gz"
-intervals="/scratch/bucket/rn6/rn6.interval_list"
-
+genome="/scratch/bucket/Rattus_norvegicus_nor6.fa"
+dbsnp="/scratch/bucket/00-All.vcf.gz"
+intervals="/scratch/bucket/Rnor_6.0.102.interval_list"
 tmp="/data/tmp"
+volume="/scratch"
 
-sample=$1
-LB="WES"
-PL="illumina"
-PU="HiSeq"
-
-# listar o R1 de cada lanes
-listR1=$(ls -1 input/$sample/*_1*.fastq)
-# executar o bwa para cada lane
-for i in $listR1
+# run HaplotypeCaller
+for srafile in $(cat $1)
 do
-	R1=$i
-	R2=$(echo $i | sed -e "s/_1/_2/g")
+        sample=$(basename $srafile)
 
-	docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ comics/bwa bwa mem -t 5 -M -R '@RG\tID:'$sample'\tLB:'$LB'\tSM:'$sample'\tPL:'$PL'\tPU:'$PU'' $genome /data/$R1 /data/$R2 | samtools view -F4 -Sbu -@2 - | samtools sort -m4G -@2 -o output/$sample.sorted.bam
+        docker run -v $volume:$volume -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" HaplotypeCaller \
+        -R $genome -I /data/output/$sample.sorted.dup.recal.bam \
+        -L $intervals \
+        --native-pair-hmm-threads 8 \
+        -G StandardAnnotation -G AS_StandardAnnotation -G StandardHCAnnotation \
+        -O /data/output/$sample.vcf.gz -ERC GVCF
+
 done
+```
 
-docker run -v /tmp:/tmp -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk:4.1.4.1 gatk --java-options "-Djava.io.tmpdir=${tmp}  -Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" MarkDuplicates \
- --TMP_DIR $tmp \
- -I /data/output/$sample.sorted.bam -O /data/output/$sample.sorted.dup.bam \
- -M /data/output/$sample.sorted.dup_metrics \
- --VALIDATION_STRINGENCY SILENT \
- --CREATE_INDEX true \
+### Executar `runCallVar.sh`
 
-	#Rodando o conteiner de recalibrador de base para aumentar a qualidade liberando uma tabela com todos os pontos considerados
-docker run --user "$(id -u):$(id -g)" -v /scratch/:/scratch -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=4" BaseRecalibrator -L $intervals -R $genome -I /data/output/$sample.sorted.dup.bam --known-sites $dbsnp -O /data/output/$sample.sorted.dup.recal.data.table
-
-docker run --user "$(id -u):$(id -g)" -v /scratch:/scratch -v $(pwd):/data broadinstitute/gatk gatk --java-options "-Xmx8G -XX:+UseParallelGC -XX:ParallelGCThreads=8" ApplyBQSR -R $genome -I /data/output/$sample.sorted.dup.bam -bqsr /data/output/$sample.sorted.dup.recal.data.table -L $intervals --create-output-bam-index true --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 -O /data/output/$sample.sorted.dup.recal.bam
+```bash
+sh runCallVar.sh srafile.txt
+```
 
 
-rm -rf input/$sample*
-rm -f output/$sample.sorted.dup.recal.data.table
-rm -f output/$sample.sorted.dup.bam 
-rm -f output/$sample.sorted.dup.bai
-rm -f output/$sample.sorted.bam
+
+### GenomicsDBImport `runGenomicsDBIimport.sh`
+
+```bash
+intervals="/scratch/bucket/Rnor_6.0.102.interval_list"
+volume="/scratch"
+
+# run GenomicsDBImport
+docker run  -v $volume:$volume -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk --java-options "-Xmx16G -XX:+UseParallelGC -XX:ParallelGCThreads=5" GenomicsDBImport \
+        --genomicsdb-workspace-path /data/genomicsdb \
+        -V /data/output/SRR1594108.2.vcf.gz \
+        -V /data/output/SRR1594109.2.vcf.gz \
+        -V /data/output/SRR1594110.2.vcf.gz \
+        -V /data/output/SRR1594111.2.vcf.gz \
+        -V /data/output/SRR1594112.2.vcf.gz \
+        -V /data/output/SRR1594113.2.vcf.gz \
+        -V /data/output/SRR1594114.2.vcf.gz \
+        -V /data/output/SRR1594115.2.vcf.gz \
+        -V /data/output/SRR1594116.2.vcf.gz \
+        -V /data/output/SRR1594117.2.vcf.gz \
+        -L $intervals
+```
+
+### Executar `runGenomicsDBIimport.sh`
+
+```bash
+sh runGenomicsDBIimport.sh
 ```
 
