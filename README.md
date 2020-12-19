@@ -80,14 +80,12 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 
 # Genome
 
-### Rattus norvegicus (rn6)
+### Rattus norvegicus 
 
-* Genes: Rat kidney disease: https://rgd.mcw.edu/rgdweb/portal/home.jsp?p=9
+* Genome assembly: Rnor_6.0 (GCA_000001895.4): ftp://ftp.ensembl.org/pub/release-102/fasta/rattus_norvegicus/dna/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
 * dbsnp Rat: 
   * https://ftp.ncbi.nih.gov/snp/pre_build152/organisms/archive/rat_10116/VCF/00-All.vcf.gz
   * https://ftp.ncbi.nih.gov/snp/pre_build152/organisms/archive/rat_10116/VCF/00-All.vcf.gz.tbi
-* Genome Rat UCSC (rn6): https://hgdownload.soe.ucsc.edu/goldenPath/rn6/bigZips/rn6.fa.gz
-
 
 
 ### Genoma nor6 `Index`, `dict`, `faidx`, `interval_list`e `BED`
@@ -95,6 +93,10 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 ```bash
 # entrar no dir de referencias
 cd /scratch/bucket
+
+# dbsnp
+wget -c https://ftp.ncbi.nih.gov/snp/pre_build152/organisms/archive/rat_10116/VCF/00-All.vcf.gz
+wget -c https://ftp.ncbi.nih.gov/snp/pre_build152/organisms/archive/rat_10116/VCF/00-All.vcf.gz.tbi
 
 # download
 wget -c ftp://ftp.ensembl.org/pub/release-102/fasta/rattus_norvegicus/dna/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
