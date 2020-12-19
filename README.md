@@ -354,7 +354,7 @@ less -SN vep_data/all.samples.vep.txt
 
 ### VEP run statistics
 
-Veja o report completo [VEP SUMMARY](all.samples.vep_summary.html)
+Veja o report completo [VEP SUMMARY](https://github.com/renatopuga/exoma-de-rato/blob/main/all.samples.vep_summary.html)
 
 | VEP version (API)    | 102 (102)                                                    |
 | -------------------- | ------------------------------------------------------------ |
