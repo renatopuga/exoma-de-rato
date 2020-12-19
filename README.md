@@ -348,9 +348,9 @@ docker run -t -i -v /vep:/opt/vep/.vep ensemblorg/ensembl-vep perl INSTALL.pl -a
 mkdir vep_data
 chmod 777 vep_data
 
-docker run -t -i -v /vep:/opt/vep/.vep  -v $(pwd):/data ensemblorg/ensembl-vep vep -i /data/all.samples.vcf -o /data/vep_data/all.samples.vep  --appris --biotype --check_existing --distance 5000 --mane --sift b --species rattus_norvegicus --symbol --transcript_version --tsl --cache  --force_overwrite --tab --pick_allele --pick --pubmed --var_synonyms --variant_class --mane
+docker run -t -i -v /vep:/opt/vep/.vep  -v $(pwd):/data ensemblorg/ensembl-vep vep -i /data/all.samples.vcf -o /data/vep_data/all.samples.vep.txt  --appris --biotype --check_existing --distance 5000 --mane --sift b --species rattus_norvegicus --symbol --transcript_version --tsl --cache  --force_overwrite --tab --pick_allele --pick --pubmed --var_synonyms --variant_class --mane
 
-less -SN vep_data/all.samples.vep
+less -SN vep_data/all.samples.vep.txt
 ```
 
 
