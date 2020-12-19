@@ -354,6 +354,8 @@ less -SN vep_data/all.samples.vep.txt
 
 ### VEP run statistics
 
+Veja o report completo (VEP SUMMARY)[all.samples.vep_summary.html]
+
 | VEP version (API)    | 102 (102)                                                    |
 | -------------------- | ------------------------------------------------------------ |
 | Annotation sources   | Cache: /opt/vep/.vep/rattus_norvegicus/102_Rnor_6.0; rattus_norvegicus_core_102_6 on ensembldb.ensembl.org |
