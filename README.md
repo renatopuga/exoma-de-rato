@@ -2,9 +2,13 @@
 
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
+# Recurso Computacional
+ * Ubuntu 20
+ * 6 cpus (core i5)
+ * 32 Gb Memória RAM
+ * 256 GB SSD storage
 
-
-### Requisitos
+# Requisitos
 
 * docker
 
