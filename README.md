@@ -3,7 +3,8 @@
 Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
 
 
-# Requisitos
+
+### Requisitos
 
 * docker
 
@@ -36,8 +37,11 @@ Variantes genéticas de amostras de Rattus norvegicus utilizando GATK4
   | **CentOS**   | [sratoolkit.current-centos_linux64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-centos_linux64.tar.gz) |
   | **Mac OS X** | [sratoolkit.current-mac64.tar.gz](http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-mac64.tar.gz) |
 
+## Workflow
 
-## Projeto e Amostras Utilizadas (SRA)
+[TOC]
+
+### Projeto e Amostras Utilizadas (SRA)
 
 Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferring (NP) rats (Norway rat). ExomeSeq of selectively bred alcohol-preferring (P) and nonpreferring (NP) rats.
 
@@ -56,7 +60,7 @@ Rattus norvegicus strain: Selectively bred alcohol-preferring (P) and nonpreferr
 
 
 
-## Classificação
+### Classificação
 
 | ID           | Group                                   | Name |
 | ------------ | --------------------------------------- | ---- |
@@ -254,7 +258,7 @@ do
 done
 ```
 
-### Executar `runCallVar.sh`
+### Executar `runCallVar.sh` (~453m / ~7,5h)
 
 ```bash
 sh runCallVar.sh srafile.txt
@@ -262,7 +266,7 @@ sh runCallVar.sh srafile.txt
 
 
 
-### GenomicsDBImport `runGenomicsDBIimport.sh`
+### GenomicsDBImport `runGenomicsDBIimport.sh` (~272m)
 
 ```bash
 intervals="/scratch/bucket/Rnor_6.0.102.interval_list"
@@ -289,4 +293,89 @@ docker run  -v $volume:$volume -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk
 ```bash
 sh runGenomicsDBIimport.sh
 ```
+
+
+
+### GenotypeGVCFs `runGenotypeGVCFs.sh` 
+
+```bash
+genome="/scratch/bucket/Rattus_norvegicus_nor6.fa"
+volume="/scratch"
+
+docker run -v $volume:$volume -v $(pwd):/data/ broadinstitute/gatk:4.1.4.1 gatk GenotypeGVCFs \
+        -V gendb:///data/genomicsdb \
+        -R $genome \
+        -O /data/all.samples.vcf
+```
+
+
+
+### Annotation - VEP
+
+
+
+```bash
+# docker pull vep
+docker pull ensemblorg/ensembl-vep
+
+# diretorio vep no seu computador
+sudo mkdir /vep
+
+# permissão de completo no diretorio
+sudo chmod a+rwx /vep   
+
+docker run -t -i -v /vep:/opt/vep/.vep ensemblorg/ensembl-vep
+```
+
+
+
+### Instalação `References` e `Plugins` (1.2Gb)
+
+> -g all
+>
+> **Available plugins:** AncestralAllele,Blosum62,CADD,CSN,Carol,Condel,Conservation,DisGeNET,Downstream,Draw,ExAC,ExACpLI,FATHMM,FATHMM_MKL,FlagLRG,FunMotifs,G2P,GO,GeneSplicer,Gwava,HGVSIntronOffset,LD,LOVD,LoF,LoFtool,LocalID,MPC,MTR,Mastermind,MaxEntScan,NearestExonJB,NearestGene,PON_P2,Phenotypes,PostGAP,ProteinSeqs,REVEL,ReferenceQuality,SameCodon,SingleLetterAA,SpliceAI,SpliceRegion,StructuralVariantOverlap,SubsetVCF,TSSDistance,dbNSFP,dbscSNV,gnomADc,miRNA,neXtProt,satMutMPRA
+
+```bash
+# download das referencias Rnor 6.0
+docker run -t -i -v /vep:/opt/vep/.vep ensemblorg/ensembl-vep perl INSTALL.pl -a cfp -s rattus_norvegicus -y Rnor_6.0  -g all
+```
+
+
+
+### Executar VEP
+
+```bash
+mkdir vep_data
+chmod 777 vep_data
+
+docker run -t -i -v /vep:/opt/vep/.vep  -v $(pwd):/data ensemblorg/ensembl-vep vep -i /data/all.samples.vcf -o /data/vep_data/all.samples.vep  --appris --biotype --check_existing --distance 5000 --mane --sift b --species rattus_norvegicus --symbol --transcript_version --tsl --cache  --force_overwrite --tab --pick_allele --pick --pubmed --var_synonyms --variant_class --mane
+
+less -SN vep_data/all.samples.vep
+```
+
+
+
+### VEP run statistics
+
+| VEP version (API)    | 102 (102)                                                    |
+| -------------------- | ------------------------------------------------------------ |
+| Annotation sources   | Cache: /opt/vep/.vep/rattus_norvegicus/102_Rnor_6.0; rattus_norvegicus_core_102_6 on ensembldb.ensembl.org |
+| Species              | rattus_norvegicus                                            |
+| Command line options | `--appris --biotype --cache --check_existing --distance 5000 --force_overwrite --input_file /data/all.samples.vcf --mane --output_file /data/vep_data/all.samples.vep --pick --pick_allele --pubmed --sift b --species rattus_norvegicus --symbol --tab --transcript_version --tsl --var_synonyms --variant_class` |
+| Start time           | 2020-12-19 13:51:14                                          |
+| End time             | 2020-12-19 13:54:14                                          |
+| Run time             | 180 seconds                                                  |
+| Input file           | /data/all.samples.vcf                                        |
+| Output file          | /data/vep_data/all.samples.vep                               |
+
+### General statistics
+
+| Lines of input read            | 197276                       |
+| ------------------------------ | ---------------------------- |
+| Variants processed             | 197276                       |
+| Variants filtered out          | 0                            |
+| Novel / existing variants      | 121166 (61.4) / 76110 (38.6) |
+| Overlapped genes               | 15071                        |
+| Overlapped transcripts         | 15375                        |
+| Overlapped regulatory features | -                            |
 
